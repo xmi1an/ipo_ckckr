@@ -8,7 +8,6 @@ API_URL2_BASE = st.secrets["API_URL2_BASE"]
 
 PASSCODE = st.secrets["PASSCODE"]
 
-
 # Retry mechanism for API calls
 def fetch_data(url):
     try:
@@ -19,7 +18,6 @@ def fetch_data(url):
         st.error(f"Error fetching data from {url}: {e}")
         return None
 
-
 # Fetch IPO data from the first API
 @st.cache_data(ttl=600)  # Cache IPO data for 10 minutes
 def fetch_ipo_data():
@@ -27,7 +25,6 @@ def fetch_ipo_data():
     if data and data.get("status"):
         return data["data"]
     return []
-
 
 # Fetch allotment data from the second API
 def fetch_allotment_data(registrar, company_id, pan_number):
@@ -37,20 +34,17 @@ def fetch_allotment_data(registrar, company_id, pan_number):
         return data["data"]
     return None
 
-
 # Validate PAN number format (basic validation)
 def validate_pan(pan_number):
     if not pan_number or len(pan_number) != 10 or not pan_number.isalnum():
         return False
     return True
 
-
 # Function to apply row highlighting
 def highlight_row(row):
     if row["Result"].lower() != "sorry":
         return ["background-color: green"] * len(row)
     return [""] * len(row)
-
 
 # Streamlit app
 def main():
@@ -127,33 +121,27 @@ def main():
                         registrar, company_id, pan_number
                     )
                     if allotment_data:
-                        results.append(
-                            {
-                                "IPO Name": name,
-                                "Registrar": registrar,
-                                "Result": allotment_data.get("title", "N/A"),
-                                "Status": allotment_data.get("text", "N/A"),
-                            }
-                        )
+                        result = {
+                            "IPO Name": name,
+                            "Registrar": registrar,
+                            "Result": allotment_data.get("title", "N/A"),
+                            "Status": allotment_data.get("text", "N/A"),
+                        }
+                        results.append(result)
+                        # Display the result immediately
+                        df = pd.DataFrame([result], index=[1])  # Start index from 1
+                        styled_df = df.style.apply(highlight_row, axis=1)  # Apply row highlighting
+                        st.dataframe(styled_df, use_container_width=True)  # Make the table responsive
                     else:
                         st.warning(
                             f"No allotment data found for {name} (PAN: {pan_number})."
                         )
 
-            # Display results for the current PAN number
+            # Display a summary for the current PAN number
             if results:
-                df = pd.DataFrame(
-                    results, index=range(1, len(results) + 1)
-                )  # Start index from 1
-                styled_df = df.style.apply(
-                    highlight_row, axis=1
-                )  # Apply row highlighting
-                st.dataframe(
-                    styled_df, use_container_width=True
-                )  # Make the table responsive
+                st.success(f"Allotment data fetched for PAN: `{pan_number}`.")
             else:
                 st.info(f"No allotment data found for PAN: `{pan_number}`.")
-
 
 if __name__ == "__main__":
     main()
